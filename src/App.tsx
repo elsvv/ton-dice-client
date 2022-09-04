@@ -1,26 +1,48 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useState } from "react";
+import { RemoteConnectPersistance, TonhubConnectProvider } from "react-ton-x";
+import { TonhubLocalConnector } from "ton-x";
+import { Page } from "./Page";
 
-function App() {
+const getInitState = (): RemoteConnectPersistance => {
+  const prev = window.localStorage.getItem("storage");
+  // @ts-ignore
+  const parsed = JSON.parse(prev !== "undefined" ? prev : "null");
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    parsed || {
+      type: "initing",
+    }
   );
+};
+
+function usePersistState<T>(init: T) {
+  const [state, setState] = useState<T>(init);
+
+  useEffect(() => {
+    window.localStorage.setItem("storage", JSON.stringify(state));
+  }, [state]);
+
+  return [state, setState];
 }
+
+const App = () => {
+  // use any persistent state you want for remote connector
+  const [connectionState, setConnectionState] =
+    usePersistState<RemoteConnectPersistance>(getInitState());
+
+  return (
+    <TonhubConnectProvider
+      network="sandbox"
+      url={window.location.origin}
+      name="TON Dice"
+      // @ts-ignore
+      connectionState={connectionState}
+      // @ts-ignore
+      setConnectionState={setConnectionState}
+    >
+      <Page />
+    </TonhubConnectProvider>
+  );
+};
 
 export default App;
