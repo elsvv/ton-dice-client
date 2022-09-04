@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { RemoteConnectPersistance, TonhubConnectProvider } from "react-ton-x";
 import { Page } from "./Page";
-import { Buffer } from "buffer";
-
-// @ts-ignore
-window.Buffer = Buffer;
 
 const getInitState = (): RemoteConnectPersistance => {
   const prev = window.localStorage.getItem("storage");
