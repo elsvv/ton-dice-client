@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { QRCode } from "react-qrcode-logo";
 import { useTonhubConnect } from "react-ton-x";
-import { Address, Builder, Cell, toNano } from "ton";
+import { Address, Builder, toNano } from "ton";
 
-const GAME_ADDR = "kQDs7CSjlu2WEqrYyk4h_rKKvvbvKf4jDxFgO6NOUmCbiOdq";
+const GAME_ADDR = "kQC-zXuKMppoxaZltslgb0_2l_bDvtmc5-QjnaN-jiq9qVzi";
+const RESERVED_FEE = 0.1;
 
 export const Page = () => {
   const connect = useTonhubConnect();
   const [oppInput, setOppInput] = useState("");
+  const [bet, setBet] = useState(1);
 
   if (connect.state.type === "initing") {
     return <span>Waiting for session</span>;
@@ -20,7 +22,7 @@ export const Page = () => {
           size={256}
           quietZone={0}
           removeQrCodeBehindLogo
-          fgColor="#002457"
+          fgColor="#333333"
         />
         <a href={connect.state.link}>Authorize</a>
       </div>
@@ -28,17 +30,18 @@ export const Page = () => {
   }
 
   const handlePlay = async () => {
-    const { address } = Address.parseFriendly(oppInput);
+    const address = Address.parse(oppInput);
 
     const payload = new Builder()
-      .storeUint(0, 32)
+      .storeUint(10, 32)
       .storeAddress(address)
       .endCell()
       .toBoc()
       .toString("base64");
 
     await connect.api.requestTransaction({
-      value: toNano(1).toString(10),
+      value: toNano(bet + RESERVED_FEE).toString(10),
+      text: `Play with ${oppInput} with ${bet} TONs bet? (0.1 - fees TONs will return back after success transaction)`,
       to: GAME_ADDR,
       payload,
     });
@@ -46,13 +49,14 @@ export const Page = () => {
 
   const handleTake = async () => {
     const payload = new Builder()
-      .storeUint(66, 32)
+      .storeUint(666, 32)
       .endCell()
       .toBoc()
       .toString("base64");
 
     await connect.api.requestTransaction({
-      value: toNano(1).toString(10),
+      value: toNano(0.1 + RESERVED_FEE).toString(10),
+      text: "Take profit from smc? Ypu have to be a smc's owner",
       to: GAME_ADDR,
       payload,
     });
@@ -60,15 +64,23 @@ export const Page = () => {
 
   return (
     <>
-      <p>
-        Your address:{" "}
-        <span>{connect.state.address.toFriendly({ testOnly: true })}</span>
-      </p>
+      <h3>Current dice smc:</h3>
+      <code>{GAME_ADDR}</code>
+      <h3>Your address: </h3>
+      <code>{connect.state.address.toFriendly({ testOnly: true })}</code>
 
+      <p>
+        <input
+          value={oppInput}
+          placeholder="opponent address"
+          onChange={(e) => setOppInput(e.target.value)}
+        />
+      </p>
       <input
-        value={oppInput}
-        placeholder="opponent address"
-        onChange={(e) => setOppInput(e.target.value)}
+        type="number"
+        value={bet}
+        placeholder="Your bet"
+        onChange={(e) => setBet(parseFloat(e.target.value))}
       />
 
       <div>
@@ -86,10 +98,24 @@ export const Page = () => {
         >
           Lenya
         </button>
+        <button
+          onClick={() =>
+            setOppInput("kQD_3QV9nlkEsLIpUieLN7gY871TPkPOHkJ1qYPDsu_vhdmN")
+          }
+        >
+          Xiaomi
+        </button>
       </div>
-
-      <button onClick={handlePlay}>Play</button>
-      <button onClick={handleTake}>Take</button>
+      <hr />
+      <div>
+        <button onClick={handlePlay}>Play dice</button>
+        <div>
+          <code>Play dice with selected opponent</code>
+        </div>
+      </div>
+      {/* <div>
+        <button onClick={handleTake}>Take</button>
+      </div> */}
     </>
   );
 };
