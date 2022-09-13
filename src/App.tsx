@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
 import { RemoteConnectPersistance, TonhubConnectProvider } from "react-ton-x";
-import { Page } from "./Page";
+
+import { usePersistState } from "hooks/usePersistState";
+
+import { Page } from "./components/Page";
 
 const getInitState = (): RemoteConnectPersistance => {
   const prev = window.localStorage.getItem("storage");
@@ -14,18 +16,7 @@ const getInitState = (): RemoteConnectPersistance => {
   );
 };
 
-function usePersistState<T>(init: T) {
-  const [state, setState] = useState<T>(init);
-
-  useEffect(() => {
-    window.localStorage.setItem("storage", JSON.stringify(state));
-  }, [state]);
-
-  return [state, setState];
-}
-
 const App = () => {
-  // use any persistent state you want for remote connector
   const [connectionState, setConnectionState] =
     usePersistState<RemoteConnectPersistance>(getInitState());
 

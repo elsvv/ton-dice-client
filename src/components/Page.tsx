@@ -1,15 +1,19 @@
+import { useConnection } from "hooks/useConnection";
+import { useFetchGames } from "hooks/useFetchGames";
 import { useState } from "react";
 import { QRCode } from "react-qrcode-logo";
-import { useTonhubConnect } from "react-ton-x";
-import { Address, Builder, toNano } from "ton";
-
-const GAME_ADDR = "kQC-zXuKMppoxaZltslgb0_2l_bDvtmc5-QjnaN-jiq9qVzi";
-const RESERVED_FEE = 0.1;
+import { DiceApi } from "services/DiceApi";
+import { Address, toNano } from "ton";
+import { AppConfig } from "../config";
+import { GlobalsList } from "./GamesList/GlobalsList";
+import { InvitesList } from "./GamesList/InvitesList";
 
 export const Page = () => {
-  const connect = useTonhubConnect();
+  const connect = useConnection();
   const [oppInput, setOppInput] = useState("");
-  const [bet, setBet] = useState(1);
+  const [bet, setBet] = useState("1");
+  const [globalBet, setGlobalBet] = useState("1");
+  useFetchGames();
 
   if (connect.state.type === "initing") {
     return <span>Waiting for session</span>;
@@ -19,8 +23,10 @@ export const Page = () => {
       <div>
         <QRCode
           value={connect.state.link}
+          logoImage={"/android-chrome-192x192.png"}
           size={256}
           quietZone={0}
+          eyeRadius={8}
           removeQrCodeBehindLogo
           fgColor="#333333"
         />
@@ -29,46 +35,24 @@ export const Page = () => {
     );
   }
 
-  const handlePlay = async () => {
-    const address = Address.parse(oppInput);
-
-    const payload = new Builder()
-      .storeUint(10, 32)
-      .storeAddress(address)
-      .endCell()
-      .toBoc()
-      .toString("base64");
-
-    await connect.api.requestTransaction({
-      value: toNano(bet + RESERVED_FEE).toString(10),
-      text: `Play with ${oppInput} with ${bet} TONs bet? (0.1 - fees TONs will return back after success transaction)`,
-      to: GAME_ADDR,
-      payload,
-    });
+  const handleInvite = async () => {
+    await DiceApi.sendInvite(Address.parse(oppInput), toNano(bet));
   };
 
-  const handleTake = async () => {
-    const payload = new Builder()
-      .storeUint(666, 32)
-      .endCell()
-      .toBoc()
-      .toString("base64");
-
-    await connect.api.requestTransaction({
-      value: toNano(0.1 + RESERVED_FEE).toString(10),
-      text: "Take profit from smc? Ypu have to be a smc's owner",
-      to: GAME_ADDR,
-      payload,
-    });
+  const handleCreateGlobal = () => {
+    DiceApi.createGlobalGame(toNano(globalBet));
   };
+
+  // };
 
   return (
     <>
       <h3>Current dice smc:</h3>
-      <code>{GAME_ADDR}</code>
+      <code>{AppConfig.GAME_ADDR}</code>
       <h3>Your address: </h3>
       <code>{connect.state.address.toFriendly({ testOnly: true })}</code>
 
+      <h4>Enter opponent address to create an invite: </h4>
       <p>
         <input
           value={oppInput}
@@ -80,9 +64,8 @@ export const Page = () => {
         type="number"
         value={bet}
         placeholder="Your bet"
-        onChange={(e) => setBet(parseFloat(e.target.value))}
+        onChange={(e) => setBet(e.target.value)}
       />
-
       <div>
         <button
           onClick={() =>
@@ -106,13 +89,23 @@ export const Page = () => {
           Xiaomi
         </button>
       </div>
-      <hr />
       <div>
-        <button onClick={handlePlay}>Play dice</button>
+        <button onClick={handleInvite}>Invite to game</button>
+        <hr />
+        <h4>Or create global game with just a bet: </h4>
         <div>
-          <code>Play dice with selected opponent</code>
+          <input
+            type="number"
+            value={globalBet}
+            placeholder="Create global bet"
+            onChange={(e) => setGlobalBet(e.target.value)}
+          />
+          <button onClick={handleCreateGlobal}>Create game</button>
         </div>
+        <hr />
       </div>
+      <InvitesList />
+      <GlobalsList />
       {/* <div>
         <button onClick={handleTake}>Take</button>
       </div> */}
